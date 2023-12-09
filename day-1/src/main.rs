@@ -1,3 +1,4 @@
+use core::fmt;
 use std::fs::File;
 use std::io::{self, BufRead};
 use std::path::Path;
@@ -41,13 +42,27 @@ impl Node {
     }
 }
 
+impl fmt::Display for Node {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let mut result: Vec<char> = Vec::new();
+
+        for (child, _) in &self.children {
+            result.push(child.clone());
+            result.push(' ');
+        }
+        let result: String = result.into_iter().collect();
+
+        write!(f, "Current Node Paths: {}", result)
+    }
+}
+
 fn main() {
     let answer = solve().unwrap();
     println!("{}", answer);
 }
 
 fn solve() -> Result<i32, Box<dyn std::error::Error>> {
-    let lines = read_lines("./input.txt")?;
+    let lines = read_lines("./test.txt")?;
     let mut answer = 0;
     for line in lines {
         let input_string = line?;
@@ -81,6 +96,7 @@ fn get_calibration_value_part_one(line: &str) -> Result<i32, Box<dyn std::error:
 }
 
 fn get_calibration_value_part_two(line: &str) -> Result<i32, Box<dyn std::error::Error>> {
+    println!("Working on line: [{}]", line);
     let mut trie = Node::new();
     trie.insert("one", 1);
     trie.insert("two", 2);
@@ -98,30 +114,52 @@ fn get_calibration_value_part_two(line: &str) -> Result<i32, Box<dyn std::error:
     // t (hree) -> th (ree) -> thr -> thre (e) -> threi (No nodes found from the leaf E, go to top, no Nodes found with I)
     // Need to add some sort of backtracking?
     let mut node = &trie;
+
+    println!("{}", node);
     for c in line.chars() {
+        println!("Current char: {}", c);
         match node.children.get(&c) {
             Some(n) => {
                 if let Some(digit) = n.value {
                     digits.push(digit);
 
+                    println!("Found a value {}! ", digit);
+
                     node = &trie;
+                    println!("Made a full reset!");
+                    println!("{}", node);
                     match node.children.get(&c) {
-                        Some(node_next) => node = node_next,
-                        None => continue,
+                        Some(node_next) => {
+                            println!("Found a value for char {}!", c);
+                            node = node_next;
+                        }
+                        None => {
+                            println!("No children after finding a value and making a reset!");
+                            println!("{}", node);
+                        }
                     }
                 } else {
+                    println!("No digit was found!");
                     node = n;
+                    println!("{}", node);
                 }
             }
             None => {
+                println!("No child was found for current char! {}", c);
                 if c.is_digit(10) {
                     let digit = c.to_digit(10).unwrap();
                     digits.push(digit as i32);
                 }
 
+                println!("Made a full reset!");
                 node = &trie;
+                println!("{}", node);
                 match node.children.get(&c) {
-                    Some(n) => node = n,
+                    Some(n) => {
+                        node = n;
+                        println!("Found a child after reset for char {}!", c);
+                        println!("{}", node);
+                    }
                     None => continue,
                 }
             }
