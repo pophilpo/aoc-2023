@@ -4,7 +4,7 @@ use std::path::Path;
 
 use std::collections::HashMap;
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 struct Node {
     children: HashMap<char, Node>,
     value: Option<i32>,
@@ -51,7 +51,7 @@ fn solve() -> Result<i32, Box<dyn std::error::Error>> {
     let mut answer = 0;
     for line in lines {
         let input_string = line?;
-        let calibration_number = get_calibration_value_part_one(&input_string)?;
+        let calibration_number = get_calibration_value_part_two(&input_string)?;
         answer += calibration_number;
     }
 
@@ -81,7 +81,59 @@ fn get_calibration_value_part_one(line: &str) -> Result<i32, Box<dyn std::error:
 }
 
 fn get_calibration_value_part_two(line: &str) -> Result<i32, Box<dyn std::error::Error>> {
-    todo!();
+    let mut trie = Node::new();
+    trie.insert("one", 1);
+    trie.insert("two", 2);
+    trie.insert("three", 3);
+    trie.insert("four", 4);
+    trie.insert("five", 5);
+    trie.insert("six", 6);
+    trie.insert("seven", 7);
+    trie.insert("eight", 8);
+    trie.insert("nine", 9);
+
+    let mut digits: Vec<i32> = Vec::new();
+
+    let mut node = &trie;
+    for c in line.chars() {
+        match node.children.get(&c) {
+            Some(n) => {
+                if let Some(digit) = n.value {
+                    digits.push(digit);
+
+                    node = &trie;
+                    match node.children.get(&c) {
+                        Some(node_next) => node = node_next,
+                        None => continue,
+                    }
+                } else {
+                    node = n;
+                }
+            }
+            None => {
+                if c.is_digit(10) {
+                    let digit = c.to_digit(10).unwrap();
+                    digits.push(digit as i32);
+                }
+
+                node = &trie;
+                match node.children.get(&c) {
+                    Some(n) => node = n,
+                    None => continue,
+                }
+            }
+        }
+    }
+
+    match (digits.first(), digits.last()) {
+        (Some(first_digit), Some(last_digit)) => {
+            return Ok(format!("{}{}", first_digit, last_digit).parse::<i32>()?)
+        }
+        (Some(first_digit), None) => {
+            return Ok(format!("{}{}", first_digit, first_digit).parse::<i32>()?)
+        }
+        _ => return Ok(0),
+    }
 }
 
 #[cfg(test)]
@@ -119,5 +171,36 @@ mod tests {
         assert_eq!(trie.search("eight"), Some(8));
         assert_eq!(trie.search("nine"), Some(9));
         assert_eq!(trie.search("nines"), None);
+    }
+
+    #[test]
+    fn test_get_calibration_value_part_two() {
+        assert_eq!(get_calibration_value_part_two("2three5three").unwrap(), 23);
+        assert_eq!(get_calibration_value_part_two("abcontwdfdfdf").unwrap(), 0);
+        assert_eq!(get_calibration_value_part_two("one2").unwrap(), 12);
+        assert_eq!(get_calibration_value_part_two("otwo3").unwrap(), 23);
+        assert_eq!(get_calibration_value_part_two("two1nine").unwrap(), 29);
+        assert_eq!(get_calibration_value_part_two("eightwothree").unwrap(), 83);
+        assert_eq!(
+            get_calibration_value_part_two("abcone2threexyz").unwrap(),
+            13
+        );
+        assert_eq!(get_calibration_value_part_two("xtwone3four").unwrap(), 24);
+        assert_eq!(
+            get_calibration_value_part_two("4nineeightseven2").unwrap(),
+            42
+        );
+        assert_eq!(get_calibration_value_part_two("zoneight234").unwrap(), 14);
+        assert_eq!(get_calibration_value_part_two("onetwone").unwrap(), 11);
+        assert_eq!(get_calibration_value_part_two("sevennine").unwrap(), 79);
+        assert_eq!(get_calibration_value_part_two("7pqrstsixteen").unwrap(), 76);
+        assert_eq!(
+            get_calibration_value_part_two("9one9pjtnncsqzhcszp5").unwrap(),
+            95
+        );
+
+        assert_eq!(get_calibration_value_part_two("sevenninenine").unwrap(), 79);
+        assert_eq!(get_calibration_value_part_two("sevenninenine").unwrap(), 79);
+        // assert_eq!(solve().unwrap(), 54078);
     }
 }
