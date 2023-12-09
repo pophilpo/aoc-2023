@@ -94,6 +94,9 @@ fn get_calibration_value_part_two(line: &str) -> Result<i32, Box<dyn std::error:
 
     let mut digits: Vec<i32> = Vec::new();
 
+    // Case like threight doesn't work.
+    // t (hree) -> th (ree) -> thr -> thre (e) -> threi (No nodes found from the leaf E, go to top, no Nodes found with I)
+    // Need to add some sort of backtracking?
     let mut node = &trie;
     for c in line.chars() {
         match node.children.get(&c) {
@@ -201,6 +204,9 @@ mod tests {
 
         assert_eq!(get_calibration_value_part_two("sevenninenine").unwrap(), 79);
         assert_eq!(get_calibration_value_part_two("sevenninenine").unwrap(), 79);
+
+        // Found the culprit. Doesn't pass
+        assert_eq!(get_calibration_value_part_two("threight").unwrap(), 88);
         // assert_eq!(solve().unwrap(), 54078);
     }
 }
