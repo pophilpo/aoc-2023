@@ -28,7 +28,7 @@ impl Node {
         node.value = Some(value);
     }
 
-    fn search(&self, word: &str) -> Option<i32> {
+    fn _search(&self, word: &str) -> Option<i32> {
         // Don't really need this func, but will use for testing
         let mut node = self;
 
@@ -62,7 +62,7 @@ fn main() {
 }
 
 fn solve() -> Result<i32, Box<dyn std::error::Error>> {
-    let lines = read_lines("./test.txt")?;
+    let lines = read_lines("./input.txt")?;
     let mut answer = 0;
     for line in lines {
         let input_string = line?;
@@ -81,15 +81,12 @@ where
     Ok(io::BufReader::new(file).lines())
 }
 
-fn get_calibration_value_part_one(line: &str) -> Result<i32, Box<dyn std::error::Error>> {
+fn _get_calibration_value_part_one(line: &str) -> Result<i32, Box<dyn std::error::Error>> {
     let digits: Vec<char> = line.chars().filter(|c| c.is_digit(10)).collect();
 
     match (digits.first(), digits.last()) {
         (Some(first_digit), Some(last_digit)) => {
             return Ok(format!("{}{}", first_digit, last_digit).parse::<i32>()?)
-        }
-        (Some(first_digit), None) => {
-            return Ok(format!("{}{}", first_digit, first_digit).parse::<i32>()?)
         }
         _ => return Ok(0),
     }
@@ -116,7 +113,10 @@ fn get_calibration_value_part_two(line: &str) -> Result<i32, Box<dyn std::error:
     let mut node = &trie;
 
     println!("{}", node);
-    for c in line.chars() {
+
+    let mut chars = line.chars().peekable();
+
+    while let Some(c) = chars.next() {
         println!("Current char: {}", c);
         match node.children.get(&c) {
             Some(n) => {
@@ -139,9 +139,29 @@ fn get_calibration_value_part_two(line: &str) -> Result<i32, Box<dyn std::error:
                         }
                     }
                 } else {
-                    println!("No digit was found!");
+                    println!("Not a LEAF!");
+
                     node = n;
+
+                    println!("Current char {}", c);
                     println!("{}", node);
+
+                    let next_char = chars.peek();
+
+                    match next_char {
+                        Some(next_char) => {
+                            if let Some(_) = node.children.get(&next_char) {
+                                continue;
+                            } else {
+                                node = &trie;
+                                match node.children.get(&c) {
+                                    Some(new_node) => node = new_node,
+                                    None => node = &trie,
+                                }
+                            }
+                        }
+                        None => continue,
+                    }
                 }
             }
             None => {
@@ -170,9 +190,6 @@ fn get_calibration_value_part_two(line: &str) -> Result<i32, Box<dyn std::error:
         (Some(first_digit), Some(last_digit)) => {
             return Ok(format!("{}{}", first_digit, last_digit).parse::<i32>()?)
         }
-        (Some(first_digit), None) => {
-            return Ok(format!("{}{}", first_digit, first_digit).parse::<i32>()?)
-        }
         _ => return Ok(0),
     }
 }
@@ -182,11 +199,11 @@ mod tests {
     use super::*;
     #[test]
     fn test_get_calibration_value_part_one() {
-        assert_eq!(get_calibration_value_part_one("1abc2").unwrap(), 12);
-        assert_eq!(get_calibration_value_part_one("pqr3stu8vwx").unwrap(), 38);
-        assert_eq!(get_calibration_value_part_one("a1b2c3d4e5f").unwrap(), 15);
-        assert_eq!(get_calibration_value_part_one("treb7uchet").unwrap(), 77);
-        assert_eq!(get_calibration_value_part_one("abc").unwrap(), 0);
+        assert_eq!(_get_calibration_value_part_one("1abc2").unwrap(), 12);
+        assert_eq!(_get_calibration_value_part_one("pqr3stu8vwx").unwrap(), 38);
+        assert_eq!(_get_calibration_value_part_one("a1b2c3d4e5f").unwrap(), 15);
+        assert_eq!(_get_calibration_value_part_one("treb7uchet").unwrap(), 77);
+        assert_eq!(_get_calibration_value_part_one("abc").unwrap(), 0);
     }
 
     #[test]
@@ -202,16 +219,16 @@ mod tests {
         trie.insert("eight", 8);
         trie.insert("nine", 9);
 
-        assert_eq!(trie.search("one"), Some(1));
-        assert_eq!(trie.search("two"), Some(2));
-        assert_eq!(trie.search("three"), Some(3));
-        assert_eq!(trie.search("four"), Some(4));
-        assert_eq!(trie.search("five"), Some(5));
-        assert_eq!(trie.search("six"), Some(6));
-        assert_eq!(trie.search("seven"), Some(7));
-        assert_eq!(trie.search("eight"), Some(8));
-        assert_eq!(trie.search("nine"), Some(9));
-        assert_eq!(trie.search("nines"), None);
+        assert_eq!(trie._search("one"), Some(1));
+        assert_eq!(trie._search("two"), Some(2));
+        assert_eq!(trie._search("three"), Some(3));
+        assert_eq!(trie._search("four"), Some(4));
+        assert_eq!(trie._search("five"), Some(5));
+        assert_eq!(trie._search("six"), Some(6));
+        assert_eq!(trie._search("seven"), Some(7));
+        assert_eq!(trie._search("eight"), Some(8));
+        assert_eq!(trie._search("nine"), Some(9));
+        assert_eq!(trie._search("nines"), None);
     }
 
     #[test]
@@ -244,7 +261,7 @@ mod tests {
         assert_eq!(get_calibration_value_part_two("sevenninenine").unwrap(), 79);
 
         // Found the culprit. Doesn't pass
+        // Fixed with a peekable lookup of the next char and making a step back
         assert_eq!(get_calibration_value_part_two("threight").unwrap(), 88);
-        // assert_eq!(solve().unwrap(), 54078);
     }
 }
