@@ -5,6 +5,18 @@ use std::path::Path;
 
 use std::collections::HashMap;
 
+const DIGIT_MAPPINGS: [(&str, i32); 9] = [
+    ("one", 1),
+    ("two", 2),
+    ("three", 3),
+    ("four", 4),
+    ("five", 5),
+    ("six", 6),
+    ("seven", 7),
+    ("eight", 8),
+    ("nine", 9),
+];
+
 #[derive(Default, Debug)]
 struct Node {
     children: HashMap<char, Node>,
@@ -95,15 +107,10 @@ fn _get_calibration_value_part_one(line: &str) -> Result<i32, Box<dyn std::error
 fn get_calibration_value_part_two(line: &str) -> Result<i32, Box<dyn std::error::Error>> {
     println!("Working on line: [{}]", line);
     let mut trie = Node::new();
-    trie.insert("one", 1);
-    trie.insert("two", 2);
-    trie.insert("three", 3);
-    trie.insert("four", 4);
-    trie.insert("five", 5);
-    trie.insert("six", 6);
-    trie.insert("seven", 7);
-    trie.insert("eight", 8);
-    trie.insert("nine", 9);
+
+    for &(word, digit_value) in &DIGIT_MAPPINGS {
+        trie.insert(word, digit_value);
+    }
 
     let mut digits: Vec<i32> = Vec::new();
 
@@ -209,15 +216,10 @@ mod tests {
     #[test]
     fn test_trie() {
         let mut trie = Node::new();
-        trie.insert("one", 1);
-        trie.insert("two", 2);
-        trie.insert("three", 3);
-        trie.insert("four", 4);
-        trie.insert("five", 5);
-        trie.insert("six", 6);
-        trie.insert("seven", 7);
-        trie.insert("eight", 8);
-        trie.insert("nine", 9);
+
+        for &(word, digit_value) in &DIGIT_MAPPINGS {
+            trie.insert(word, digit_value);
+        }
 
         assert_eq!(trie._search("one"), Some(1));
         assert_eq!(trie._search("two"), Some(2));
