@@ -2,10 +2,11 @@ use std::fs::File;
 use std::io::{self, BufRead};
 
 fn main() {
-    parse_input().unwrap();
+    let answser = solve("input.txt").unwrap();
+    println!("The answer is {}", answser);
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct Coordinates {
     x: usize,
     y: usize,
@@ -36,10 +37,10 @@ impl PartNumber {
     }
 }
 
-fn parse_input() -> Result<(), Box<dyn std::error::Error>> {
-    let filename = "test.txt";
+fn parse_input(
+    filename: &str,
+) -> Result<(Vec<PartNumber>, Vec<Coordinates>), Box<dyn std::error::Error>> {
     let file = File::open(filename)?;
-
     let lines = io::BufReader::new(file).lines();
 
     let mut part_numbers: Vec<PartNumber> = Vec::new();
@@ -47,16 +48,16 @@ fn parse_input() -> Result<(), Box<dyn std::error::Error>> {
 
     for (y, line) in lines.enumerate() {
         let line = line?;
-        println!("{}", line);
         let mut curent_number_buffer: Vec<char> = Vec::new();
 
         for (x, c) in line.chars().enumerate() {
+            let location = Coordinates { x: x + 1, y: y + 1 };
+
             if !c.is_digit(10) {
                 if !curent_number_buffer.is_empty() {
                     let number: String = curent_number_buffer.iter().collect();
 
-                    let location = Coordinates { x, y };
-                    let part_number = PartNumber::new(&number, location)?;
+                    let part_number = PartNumber::new(&number, location.clone())?;
                     part_numbers.push(part_number);
                     curent_number_buffer.clear();
                 }
@@ -66,7 +67,6 @@ fn parse_input() -> Result<(), Box<dyn std::error::Error>> {
                         continue;
                     }
                     _ => {
-                        let location = Coordinates { x, y };
                         symbols.push(location);
                     }
                 }
@@ -74,15 +74,49 @@ fn parse_input() -> Result<(), Box<dyn std::error::Error>> {
                 curent_number_buffer.push(c);
             }
         }
+
+        if !curent_number_buffer.is_empty() {
+            let location = Coordinates {
+                x: line.len(),
+                y: y + 1,
+            };
+            let number: String = curent_number_buffer.iter().collect();
+            let part_number = PartNumber::new(&number, location.clone())?;
+            part_numbers.push(part_number);
+            curent_number_buffer.clear();
+        }
     }
 
-    for part_number in part_numbers {
-        println!("{:?}", part_number);
+    Ok((part_numbers, symbols))
+}
+
+fn solve(filename: &str) -> Result<u32, Box<dyn std::error::Error>> {
+    let mut answer = 0;
+    let (part_numbers, symbols) = parse_input(filename)?;
+
+    for part in part_numbers {
+        for symbol in &symbols {
+            if symbol.y >= part.location.y - 1
+                && symbol.y <= part.location.y + 1
+                && symbol.x >= part.location.x - 1
+                && symbol.x <= part.location.x + part.length
+            {
+                answer += part.value;
+                break;
+            }
+        }
     }
 
-    for symbol in symbols {
-        println!("{:?}", symbol);
-    }
+    Ok(answer)
+}
 
-    Ok(())
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+
+    fn test_solution() {
+        let filename = "test.txt";
+        assert_eq!(solve(filename).unwrap(), 4361);
+    }
 }
