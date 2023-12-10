@@ -105,88 +105,107 @@ fn _get_calibration_value_part_one(line: &str) -> Result<i32, Box<dyn std::error
 }
 
 fn get_calibration_value_part_two(line: &str) -> Result<i32, Box<dyn std::error::Error>> {
-    println!("Working on line: [{}]", line);
     let mut trie = Node::new();
 
     for &(word, digit_value) in &DIGIT_MAPPINGS {
         trie.insert(word, digit_value);
     }
 
+    // Get all found digits into 1 vec
     let mut digits: Vec<i32> = Vec::new();
 
-    // Case like threight doesn't work.
-    // t (hree) -> th (ree) -> thr -> thre (e) -> threi (No nodes found from the leaf E, go to top, no Nodes found with I)
-    // Need to add some sort of backtracking?
     let mut node = &trie;
-
-    println!("{}", node);
-
     let mut chars = line.chars().peekable();
 
-    while let Some(c) = chars.next() {
-        println!("Current char: {}", c);
-        match node.children.get(&c) {
-            Some(n) => {
-                if let Some(digit) = n.value {
+    while let Some(current_char) = chars.next() {
+        // Check if current char is part of the word
+        match node.children.get(&current_char) {
+            Some(matched_node) => {
+                // If matched node has a value, it's the last node
+                if let Some(digit) = matched_node.value {
+                    // Push the digit of the last value to all found digits
                     digits.push(digit);
 
-                    println!("Found a value {}! ", digit);
-
+                    // Reset the node to the first one, since we reached the end
                     node = &trie;
-                    println!("Made a full reset!");
-                    println!("{}", node);
-                    match node.children.get(&c) {
-                        Some(node_next) => {
-                            println!("Found a value for char {}!", c);
-                            node = node_next;
+
+                    // Check if the current char might start a new node
+                    // E.g. for cases like twone where the correct result would be 2, 1
+                    match node.children.get(&current_char) {
+                        // If the current char is a start of a new word
+                        // Just continue traversal in that direction
+                        Some(matched_node) => {
+                            node = matched_node;
                         }
+                        // Do nothing if the current char doesn't start a word
+                        // Meaning we are still at the top most node
                         None => {
-                            println!("No children after finding a value and making a reset!");
-                            println!("{}", node);
+                            continue;
                         }
                     }
                 } else {
-                    println!("Not a LEAF!");
+                    // Case where we found a new node, but it's not the last one
+                    // Meaning this node is not a Leaf and has children
 
-                    node = n;
+                    // Set the current node to the new matched node
+                    node = matched_node;
 
-                    println!("Current char {}", c);
-                    println!("{}", node);
+                    // In order not get a dead end, we need to check that if next char
+                    // Is one of the childs of the current node
+                    // This part is designed for cases like "threight"
+                    // The traversal wihout this part would look like this: (word_part [current_node_children])
+                    // None [o, t, f, s, e, n] -> t [h, w] -> th [r] -> thr -> [e] -> thre [e] -> threi [nowhere to go, reset] -> i [nowhere to go, next char]
+                    // So when we reach a node with 1 leaf child, but the char value of this node could be another word, we will hit a dead end because the only child
+                    // Is a leaf
 
+                    // Get the next char in line without consuming it
                     let next_char = chars.peek();
 
                     match next_char {
                         Some(next_char) => {
+                            // If the next char leads somewhere from the current node
+                            // Just leave everything as is, it will continue traversal in the right direction
                             if let Some(_) = node.children.get(&next_char) {
                                 continue;
-                            } else {
+                            }
+                            // If the next char hit's a dead end, check if current char
+                            // Might start a new word
+                            else {
                                 node = &trie;
-                                match node.children.get(&c) {
+                                match node.children.get(&current_char) {
+                                    // If current char can start a new word -> go in that direction
                                     Some(new_node) => node = new_node,
-                                    None => node = &trie,
+
+                                    // If current char is not a start of a new word, start from the top
+                                    None => continue,
                                 }
                             }
                         }
+
+                        // If there is no next char just do nothing
                         None => continue,
                     }
                 }
             }
+
+            // Case where a char doesn't math any node
             None => {
-                println!("No child was found for current char! {}", c);
-                if c.is_digit(10) {
-                    let digit = c.to_digit(10).unwrap();
+                // It might be a digit
+                if current_char.is_digit(10) {
+                    let digit = current_char.to_digit(10).unwrap();
                     digits.push(digit as i32);
                 }
 
-                println!("Made a full reset!");
+                // If it's not a digit, start from the top
                 node = &trie;
-                println!("{}", node);
-                match node.children.get(&c) {
+
+                // Check if the char might begin a new word
+                match node.children.get(&current_char) {
+                    // If it does, go in that direction
                     Some(n) => {
                         node = n;
-                        println!("Found a child after reset for char {}!", c);
-                        println!("{}", node);
                     }
+                    // If it doesn't, just stay at the top and take next char
                     None => continue,
                 }
             }
