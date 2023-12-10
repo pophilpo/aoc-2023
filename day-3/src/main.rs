@@ -43,9 +43,11 @@ fn parse_input() -> Result<(), Box<dyn std::error::Error>> {
     let lines = io::BufReader::new(file).lines();
 
     let mut part_numbers: Vec<PartNumber> = Vec::new();
+    let mut symbols: Vec<Coordinates> = Vec::new();
 
     for (y, line) in lines.enumerate() {
         let line = line?;
+        println!("{}", line);
         let mut curent_number_buffer: Vec<char> = Vec::new();
 
         for (x, c) in line.chars().enumerate() {
@@ -58,6 +60,16 @@ fn parse_input() -> Result<(), Box<dyn std::error::Error>> {
                     part_numbers.push(part_number);
                     curent_number_buffer.clear();
                 }
+
+                match c {
+                    '.' => {
+                        continue;
+                    }
+                    _ => {
+                        let location = Coordinates { x, y };
+                        symbols.push(location);
+                    }
+                }
             } else {
                 curent_number_buffer.push(c);
             }
@@ -66,6 +78,10 @@ fn parse_input() -> Result<(), Box<dyn std::error::Error>> {
 
     for part_number in part_numbers {
         println!("{:?}", part_number);
+    }
+
+    for symbol in symbols {
+        println!("{:?}", symbol);
     }
 
     Ok(())
