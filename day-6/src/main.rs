@@ -3,12 +3,12 @@ use std::io::{self, BufRead};
 
 #[derive(Debug)]
 struct Race {
-    duration: f32,
-    record_distance: f32,
+    duration: f64,
+    record_distance: f64,
 }
 
 impl Race {
-    fn new(duration: f32, record_distance: f32) -> Self {
+    fn new(duration: f64, record_distance: f64) -> Self {
         Self {
             duration,
             record_distance,
@@ -21,18 +21,18 @@ fn read_input(filename: &str) -> Result<Vec<Race>, Box<dyn std::error::Error>> {
 
     let mut lines = io::BufReader::new(file).lines();
 
-    let race_durations: Vec<f32> = lines
+    let race_durations: Vec<f64> = lines
         .next()
         .expect("Input is always valid")?
         .split_whitespace()
-        .filter_map(|value| value.parse::<f32>().ok())
+        .filter_map(|value| value.parse::<f64>().ok())
         .collect();
 
-    let race_records: Vec<f32> = lines
+    let race_records: Vec<f64> = lines
         .next()
         .expect("Input is always valid")?
         .split_whitespace()
-        .filter_map(|value| value.parse::<f32>().ok())
+        .filter_map(|value| value.parse::<f64>().ok())
         .collect();
 
     let races: Vec<Race> = race_durations
@@ -44,10 +44,11 @@ fn read_input(filename: &str) -> Result<Vec<Race>, Box<dyn std::error::Error>> {
     Ok(races)
 }
 
-fn solve_part_one(filename: &str) -> Result<u32, Box<dyn std::error::Error>> {
+fn solve(filename: &str) -> Result<u64, Box<dyn std::error::Error>> {
     // Basically solve {time=(time-x)*x - record} and get int's between the answers
     // -x^2 +time*x - record = 0
     // d = (time*time) - 4 *(record*x)/
+    // Both parts have the same solution
 
     let races = read_input(filename)?;
     let mut answer = 1;
@@ -71,7 +72,7 @@ fn solve_part_one(filename: &str) -> Result<u32, Box<dyn std::error::Error>> {
             x_2 = x_2.ceil();
         }
 
-        for _ in x_1 as u32..x_2 as u32 {
+        for _ in x_1 as u64..x_2 as u64 {
             tmp += 1;
         }
         answer *= tmp;
@@ -92,6 +93,6 @@ mod tests {
     #[test]
     fn test_solve_part_one() {
         let filename = "test.txt";
-        assert_eq!(solve_part_one(filename).unwrap(), 288);
+        assert_eq!(solve(filename).unwrap(), 288);
     }
 }
