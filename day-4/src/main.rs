@@ -1,24 +1,26 @@
+use std::collections::HashMap;
 use std::fs::File;
 use std::io::{self, BufRead};
 
 fn main() {
     let filename = "input.txt";
-    let answer = solve_part_one(filename).unwrap();
+    let answer = solve_part_two(filename).unwrap();
     println!("The answer is {}", answer);
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct Card {
     card_number: usize,
     value: u32,
     winning_numbers: Vec<u32>,
     numbers: Vec<u32>,
+    winning_numbers_count: u32,
 }
 
 impl Card {
     fn new(line: &str) -> Self {
         let card_number = line
-            .split(":")
+            .split(':')
             .next()
             .expect("Input is always valid")
             .split_whitespace()
@@ -27,10 +29,10 @@ impl Card {
             .parse::<usize>()
             .expect("Input is always valid");
 
-        let card_values = line.split(":").last().expect("Input is always valid");
+        let card_values = line.split(':').last().expect("Input is always valid");
 
         let winning_numbers: Vec<u32> = card_values
-            .split("|")
+            .split('|')
             .next()
             .expect("Input is always valid")
             .split_whitespace()
@@ -38,7 +40,7 @@ impl Card {
             .collect::<Vec<u32>>();
 
         let numbers: Vec<u32> = card_values
-            .split("|")
+            .split('|')
             .last()
             .expect("Input is always valid")
             .split_whitespace()
@@ -50,13 +52,22 @@ impl Card {
             value: 0,
             winning_numbers,
             numbers,
+            winning_numbers_count: 0,
         }
     }
 
-    fn calculate_value(&mut self) {
+    fn count_winning_numbers(&mut self) {
+        for number in &self.numbers {
+            if self.winning_numbers.contains(number) {
+                self.winning_numbers_count += 1
+            }
+        }
+    }
+
+    fn _calculate_value(&mut self) {
         // Assuming numbers can't be duplicates
         for number in &self.numbers {
-            if self.winning_numbers.contains(&number) {
+            if self.winning_numbers.contains(number) {
                 if self.value == 0 {
                     self.value = 1;
                 } else {
@@ -83,16 +94,49 @@ fn parse_input(filename: &str) -> Result<Vec<Card>, Box<dyn std::error::Error>> 
     Ok(cards)
 }
 
-fn solve_part_one(filename: &str) -> Result<u32, Box<dyn std::error::Error>> {
+fn _solve_part_one(filename: &str) -> Result<u32, Box<dyn std::error::Error>> {
     let mut cards = parse_input(filename)?;
 
     let answer: u32 = cards
         .iter_mut()
         .map(|card| {
-            card.calculate_value();
+            card._calculate_value();
             card.value
         })
         .sum();
+
+    Ok(answer)
+}
+
+fn walk(table: &HashMap<usize, Card>, card_number: usize, answer: &mut u32) -> u32 {
+    let current_card = table.get(&card_number).unwrap();
+
+    let current_winning_number = current_card.winning_numbers_count;
+
+    let range = card_number + (current_winning_number + 1) as usize;
+
+    for tmp_card_number in card_number + 1..range {
+        *answer += 1;
+        walk(table, tmp_card_number, answer);
+    }
+
+    *answer
+}
+
+fn solve_part_two(filename: &str) -> Result<u32, Box<dyn std::error::Error>> {
+    let mut answer = 0;
+    let mut cards = parse_input(filename)?;
+    let mut table: HashMap<usize, Card> = HashMap::new();
+
+    for card in cards.iter_mut() {
+        card.count_winning_numbers();
+        table.insert(card.card_number, card.clone());
+        answer += 1;
+    }
+
+    for card in cards.iter() {
+        walk(&table, card.card_number, &mut answer);
+    }
 
     Ok(answer)
 }
@@ -105,6 +149,13 @@ mod tests {
     fn test_solve_part_one() {
         let filename = "test.txt";
 
-        assert_eq!(solve_part_one(filename).unwrap(), 13);
+        assert_eq!(_solve_part_one(filename).unwrap(), 13);
+    }
+
+    #[test]
+    fn test_solve_part_two() {
+        let filename = "test.txt";
+
+        assert_eq!(solve_part_two(filename).unwrap(), 30);
     }
 }
