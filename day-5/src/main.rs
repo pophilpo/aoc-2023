@@ -132,8 +132,112 @@ fn solve_part_one(filename: &str) -> Result<i64, Box<dyn std::error::Error>> {
     return Ok(answer);
 }
 
+fn generate_seeds(input: &str) -> Result<Vec<i64>, Box<dyn std::error::Error>> {
+    // Can't really use this function since storing so many numbers in a Vec
+    // Get's the program to get OOMKilled
+    // Will keep it for the tests and use it's core in the solve function
+    let mut numbers = input
+        .split_whitespace()
+        .filter_map(|value| value.parse::<i64>().ok());
+
+    let mut seeds: Vec<i64> = Vec::new();
+
+    while let (Some(start), Some(step)) = (numbers.next(), numbers.next()) {
+        for seed in start..start + step {
+            seeds.push(seed)
+        }
+    }
+
+    Ok(seeds)
+}
+
+fn solve_part_two(filename: &str) -> Result<i64, Box<dyn std::error::Error>> {
+    // Extra slow solution but it works
+    let mut answer = i64::MAX;
+
+    let file = File::open(filename)?;
+
+    let mut lines = io::BufReader::new(file).lines();
+    let seeds_line = lines.next().expect("Input is always valid")?;
+
+    let mut seed_to_soil_maps: Vec<Map> = Vec::new();
+    let mut soil_to_fertilizer_maps: Vec<Map> = Vec::new();
+    let mut fertilizer_to_water_maps: Vec<Map> = Vec::new();
+    let mut water_to_light_maps: Vec<Map> = Vec::new();
+    let mut light_to_temp_maps: Vec<Map> = Vec::new();
+    let mut temp_to_hum_maps: Vec<Map> = Vec::new();
+    let mut hum_to_location_maps: Vec<Map> = Vec::new();
+
+    let mut current_variant = MapVariants::None;
+
+    for line in lines {
+        let line = line?;
+
+        match line.as_str() {
+            "" => continue,
+            "seed-to-soil map:" => current_variant = MapVariants::SeedSoil,
+            "soil-to-fertilizer map:" => current_variant = MapVariants::SoilFert,
+            "fertilizer-to-water map:" => current_variant = MapVariants::FertWater,
+            "water-to-light map:" => current_variant = MapVariants::WaterLight,
+            "light-to-temperature map:" => current_variant = MapVariants::LightTemp,
+            "temperature-to-humidity map:" => current_variant = MapVariants::TempHum,
+            "humidity-to-location map:" => current_variant = MapVariants::HumLoc,
+            _ => {
+                let map = Map::new(&line)?;
+                match current_variant {
+                    MapVariants::SeedSoil => seed_to_soil_maps.push(map),
+                    MapVariants::SoilFert => soil_to_fertilizer_maps.push(map),
+                    MapVariants::FertWater => fertilizer_to_water_maps.push(map),
+                    MapVariants::WaterLight => water_to_light_maps.push(map),
+                    MapVariants::LightTemp => light_to_temp_maps.push(map),
+                    MapVariants::TempHum => temp_to_hum_maps.push(map),
+                    MapVariants::HumLoc => hum_to_location_maps.push(map),
+                    _ => unreachable!(),
+                }
+            }
+        }
+    }
+
+    let mut map_collection: Vec<Vec<Map>> = Vec::with_capacity(7);
+    map_collection.push(seed_to_soil_maps);
+    map_collection.push(soil_to_fertilizer_maps);
+    map_collection.push(fertilizer_to_water_maps);
+    map_collection.push(water_to_light_maps);
+    map_collection.push(light_to_temp_maps);
+    map_collection.push(temp_to_hum_maps);
+    map_collection.push(hum_to_location_maps);
+
+    let mut numbers = seeds_line
+        .split_whitespace()
+        .filter_map(|value| value.parse::<i64>().ok());
+
+    while let (Some(start), Some(step)) = (numbers.next(), numbers.next()) {
+        for seed in start..start + step {
+            let mut current_answer = seed;
+
+            for maps in &map_collection {
+                for map in maps {
+                    match map.get_mapping(current_answer) {
+                        Some(new_answer) => {
+                            current_answer = new_answer;
+                            break;
+                        }
+                        None => continue,
+                    }
+                }
+            }
+
+            if current_answer < answer {
+                answer = current_answer;
+            }
+        }
+    }
+
+    return Ok(answer);
+}
+
 fn main() {
-    let answer = solve_part_one("input.txt").unwrap();
+    let answer = solve_part_two("input.txt").unwrap();
     println!("{}", answer);
 }
 
@@ -182,5 +286,27 @@ mod tests {
     fn test_solve_part_one() {
         let filename = "test.txt";
         assert_eq!(solve_part_one(filename).unwrap(), 35);
+    }
+
+    #[test]
+    fn test_solve_part_two() {
+        let filename = "test.txt";
+        assert_eq!(solve_part_two(filename).unwrap(), 46);
+    }
+
+    #[test]
+    fn test_seed_generation() {
+        let input = "79 14 55 13";
+        let mut expected_result = Vec::new();
+
+        for num in 79..93 {
+            expected_result.push(num);
+        }
+
+        for num in 55..68 {
+            expected_result.push(num);
+        }
+
+        assert_eq!(generate_seeds(input).unwrap(), expected_result);
     }
 }
