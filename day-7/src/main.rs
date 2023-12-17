@@ -98,8 +98,32 @@ fn compare_cards(cards1: &str, cards2: &str) -> Ordering {
     return Ordering::Equal;
 }
 
+fn solve_part_one(filename: &str) -> Result<u32, Box<dyn std::error::Error>> {
+    let mut answer = 0;
+    let file = File::open(filename)?;
+    let lines = io::BufReader::new(file).lines();
+
+    let mut hands: Vec<Hand> = Vec::new();
+
+    for line in lines {
+        let line = line?;
+        let hand = Hand::new(&line);
+        hands.push(hand);
+    }
+
+    hands.sort();
+
+    for (i, hand) in hands.iter().enumerate() {
+        let current_bid = (i + 1) as u32 * hand.bid;
+        answer += current_bid;
+    }
+
+    Ok(answer)
+}
+
 fn main() {
-    println!("Hello, world!");
+    let answer = solve_part_one("input.txt").unwrap();
+    println!("{}", answer);
 }
 
 #[cfg(test)]
@@ -193,5 +217,12 @@ mod tests {
         };
 
         assert_eq!(Hand::new(input), expected_result);
+    }
+
+    #[test]
+    fn test_solve_part_one() {
+        let filename = "test.txt";
+
+        assert_eq!(solve_part_one(filename).unwrap(), 6440);
     }
 }
