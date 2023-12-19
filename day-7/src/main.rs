@@ -15,6 +15,7 @@ enum HandType {
 }
 #[derive(Debug, PartialEq)]
 struct Hand {
+    real_cards: String,
     cards: String,
     bid: u32,
     kind: HandType,
@@ -31,6 +32,8 @@ impl Hand {
             .parse()
             .expect("The input is always valid");
 
+        let real_cards = cards.clone();
+
         let mut card_table: HashMap<char, u32> = HashMap::new();
 
         for card in cards.chars() {
@@ -40,7 +43,7 @@ impl Hand {
         let mut count: Vec<&u32> = card_table.values().collect();
         count.sort();
 
-        let kind = match count.as_slice() {
+        let mut kind = match count.as_slice() {
             [5] => HandType::FiveOfAkind,
             [1, 4] => HandType::FourOfAkind,
             [2, 3] => HandType::FullHouse,
@@ -51,7 +54,58 @@ impl Hand {
             _ => unreachable!(),
         };
 
-        return Self { cards, bid, kind };
+        let mut cards_candidate = cards.clone();
+        // Iterate over all variants to find the strongest one
+        if cards.contains('J') {
+            let mut possible_replacements: Vec<char> = Vec::new();
+            possible_replacements.push('2');
+            possible_replacements.push('3');
+            possible_replacements.push('4');
+            possible_replacements.push('5');
+            possible_replacements.push('6');
+            possible_replacements.push('7');
+            possible_replacements.push('8');
+            possible_replacements.push('9');
+            possible_replacements.push('T');
+            possible_replacements.push('Q');
+            possible_replacements.push('K');
+            possible_replacements.push('A');
+
+            for candidate in possible_replacements {
+                let mut card_table: HashMap<char, u32> = HashMap::new();
+                let new_cards = cards.clone().replace('J', candidate.to_string().as_str());
+
+                for card in new_cards.chars() {
+                    *card_table.entry(card).or_insert(0) += 1;
+                }
+
+                let mut count: Vec<&u32> = card_table.values().collect();
+                count.sort();
+
+                let new_kind = match count.as_slice() {
+                    [5] => HandType::FiveOfAkind,
+                    [1, 4] => HandType::FourOfAkind,
+                    [2, 3] => HandType::FullHouse,
+                    [1, 1, 3] => HandType::ThreeOfAkind,
+                    [1, 2, 2] => HandType::TwoPair,
+                    [1, 1, 1, 2] => HandType::OnePair,
+                    [1, 1, 1, 1, 1] => HandType::HighCard,
+                    _ => unreachable!(),
+                };
+
+                if new_kind >= kind {
+                    kind = new_kind;
+                    cards_candidate = new_cards;
+                }
+            }
+        }
+
+        return Self {
+            real_cards,
+            cards: cards_candidate,
+            bid,
+            kind,
+        };
     }
 }
 impl Eq for Hand {}
@@ -59,7 +113,7 @@ impl Eq for Hand {}
 impl Ord for Hand {
     fn cmp(&self, other: &Self) -> Ordering {
         match self.kind.cmp(&other.kind) {
-            Ordering::Equal => compare_cards(&self.cards, &other.cards),
+            Ordering::Equal => compare_cards(&self.real_cards, &other.real_cards),
             other => other,
         }
     }
@@ -73,6 +127,7 @@ impl PartialOrd for Hand {
 
 fn compare_cards(cards1: &str, cards2: &str) -> Ordering {
     let mut dict: HashMap<char, u32> = HashMap::new();
+    dict.insert('J', 1);
     dict.insert('2', 2);
     dict.insert('3', 3);
     dict.insert('4', 4);
@@ -82,7 +137,6 @@ fn compare_cards(cards1: &str, cards2: &str) -> Ordering {
     dict.insert('8', 8);
     dict.insert('9', 9);
     dict.insert('T', 10);
-    dict.insert('J', 11);
     dict.insert('Q', 12);
     dict.insert('K', 13);
     dict.insert('A', 14);
@@ -132,29 +186,20 @@ mod tests {
 
     #[test]
     fn test_hand_sort() {
-        let card_1 = Hand::new("AAAAA 12");
-        let card_2 = Hand::new("AA8AA 12");
-        let card_3 = Hand::new("23332 12");
-        let card_4 = Hand::new("TTT98 12");
-        let card_5 = Hand::new("23432 12");
-        let card_6 = Hand::new("A23A4 12");
-        let card_7 = Hand::new("23456 12");
-        let card_8 = Hand::new("JJJJJ 12");
+        let hand_1_input = "JKKK2 12";
+        let hand_2_input = "QQQQ2 12";
 
-        assert!(card_1 > card_2);
-        assert!(card_2 > card_3);
-        assert!(card_3 > card_4);
-        assert!(card_4 > card_5);
-        assert!(card_5 > card_6);
-        assert!(card_6 > card_7);
+        let hand_1 = Hand::new(hand_1_input);
+        let hand_2 = Hand::new(hand_2_input);
 
-        assert!(card_1 > card_8);
+        assert!(hand_1 < hand_2);
     }
 
     #[test]
     fn test_hand_parsing() {
         let input = "AAAAA 12";
         let expected_result = Hand {
+            real_cards: String::from("AAAAA"),
             cards: String::from("AAAAA"),
             bid: 12,
             kind: HandType::FiveOfAkind,
@@ -164,6 +209,7 @@ mod tests {
 
         let input = "AA8AA 100";
         let expected_result = Hand {
+            real_cards: String::from("AA8AA"),
             cards: String::from("AA8AA"),
             bid: 100,
             kind: HandType::FourOfAkind,
@@ -173,6 +219,7 @@ mod tests {
 
         let input = "23332 14";
         let expected_result = Hand {
+            real_cards: String::from("23332"),
             cards: String::from("23332"),
             bid: 14,
             kind: HandType::FullHouse,
@@ -182,6 +229,7 @@ mod tests {
 
         let input = "TTT98 14";
         let expected_result = Hand {
+            real_cards: String::from("TTT98"),
             cards: String::from("TTT98"),
             bid: 14,
             kind: HandType::ThreeOfAkind,
@@ -191,6 +239,7 @@ mod tests {
 
         let input = "23432 0";
         let expected_result = Hand {
+            real_cards: String::from("23432"),
             cards: String::from("23432"),
             bid: 0,
             kind: HandType::TwoPair,
@@ -200,6 +249,7 @@ mod tests {
 
         let input = "A23A4 124";
         let expected_result = Hand {
+            real_cards: String::from("A23A4"),
             cards: String::from("A23A4"),
             bid: 124,
             kind: HandType::OnePair,
@@ -211,6 +261,7 @@ mod tests {
 
         let input = "23456 121";
         let expected_result = Hand {
+            real_cards: String::from("23456"),
             cards: String::from("23456"),
             bid: 121,
             kind: HandType::HighCard,
@@ -220,9 +271,22 @@ mod tests {
     }
 
     #[test]
-    fn test_solve_part_one() {
-        let filename = "test.txt";
+    fn test_card_genefation_joker() {
+        let input = "T55J5 19";
+        let expeted_result = Hand {
+            real_cards: "T55J5".to_string(),
+            cards: "T5555".to_string(),
+            bid: 19,
+            kind: HandType::FourOfAkind,
+        };
 
-        assert_eq!(solve_part_one(filename).unwrap(), 6440);
+        let input = "TTJ22 19";
+        let expeted_result = Hand {
+            real_cards: "TTJ22".to_string(),
+            cards: "TTT22".to_string(),
+            bid: 19,
+            kind: HandType::FullHouse,
+        };
+        assert_eq!(Hand::new(input), expeted_result);
     }
 }
